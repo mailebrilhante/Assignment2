@@ -104,4 +104,60 @@ class UnitTests {
 
         assertEquals(1, helper.latestShipment?.notes?.size, "latestShipment should not be updated after stopTracking.")
     }
+
+    // --- Update Strategy Tests ---
+
+    private val created: (Shipment, Long, String?) -> Unit = { shipment, _, _ ->
+        shipment.status = "created"
+    }
+
+    private val shipped: (Shipment, Long, String?) -> Unit = { shipment, timestamp, newLocation ->
+        shipment.status = "shipped"
+        newLocation?.let { shipment.location = it }
+        shipment.expectedDelivery = timestamp
+    }
+
+    private val delayed: (Shipment, Long, String?) -> Unit = { shipment, timestamp, reason ->
+        shipment.status = "delayed"
+        reason?.let { shipment.addNote("Delayed: $it") }
+        shipment.expectedDelivery = timestamp
+    }
+
+    @Test
+    fun testApplyUpdateWithShippedStrategy() {
+        val shipment = Shipment("S4000")
+        val newLocation = "Warehouse B"
+        val deliveryDate = System.currentTimeMillis() + 100000L
+
+        shipment.applyUpdate(shipped, deliveryDate, newLocation)
+
+        assertEquals("shipped", shipment.status)
+        assertEquals(newLocation, shipment.location)
+        assertEquals(deliveryDate, shipment.expectedDelivery)
+    }
+
+    @Test
+    fun testApplyUpdateWithDelayedStrategy() {
+        val shipment = Shipment("S5000")
+        val reason = "Weather conditions"
+        val newDeliveryDate = System.currentTimeMillis() + 200000L
+
+        shipment.applyUpdate(delayed, newDeliveryDate, reason)
+
+        assertEquals("delayed", shipment.status)
+        assertEquals(newDeliveryDate, shipment.expectedDelivery)
+        assertTrue(shipment.notes.contains("Delayed: $reason"))
+    }
+
+    @Test
+    fun testApplyUpdateNotifiesObservers() {
+        val shipment = Shipment("S6000")
+        val observer = TestObserver()
+        shipment.registerObserver(observer)
+
+        shipment.applyUpdate(created, System.currentTimeMillis(), null)
+
+        assertTrue(observer.updateCalled, "Observer should be notified when an update is applied.")
+        assertEquals(shipment, observer.updatedShipment)
+    }
 }
