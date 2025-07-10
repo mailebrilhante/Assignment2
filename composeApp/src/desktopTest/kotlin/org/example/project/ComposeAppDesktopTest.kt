@@ -4,7 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class ShipmentTest {
+class UnitTests {
 
     private class TestObserver : Observer {
         var updateCalled = false
@@ -65,5 +65,43 @@ class ShipmentTest {
         assertTrue(observer.updateCalled)
         assertEquals(shipment, observer.updatedShipment)
         assertEquals("shipped", shipment.status)
+    }
+
+    @Test
+    fun testStartTrackingSetsInitialState() {
+        val shipment = Shipment("S1000")
+        val helper = TrackerViewHelper(shipment)
+        helper.startTracking()
+        assertEquals(shipment.id, helper.latestShipment?.id, "After startTracking, the shipment IDs should match.")
+    }
+
+    @Test
+    fun testUpdateReceivesShipmentChanges() {
+        val shipment = Shipment("S2000")
+        val helper = TrackerViewHelper(shipment)
+        helper.startTracking()
+
+        shipment.addNote("Package is out for delivery")
+
+        assertEquals(shipment.id, helper.latestShipment?.id, "The shipment IDs should match after an update.")
+        assertTrue(
+            helper.latestShipment?.notes?.contains("Package is out for delivery") ?: false,
+            "The notes in the helper's shipment should reflect the update."
+        )
+    }
+
+    @Test
+    fun testStopTrackingCeasesUpdates() {
+        val shipment = Shipment("S3000")
+        val helper = TrackerViewHelper(shipment)
+        helper.startTracking()
+
+        shipment.addNote("First update")
+        assertEquals(1, helper.latestShipment?.notes?.size)
+
+        helper.stopTracking()
+        shipment.addNote("Second update after stopping")
+
+        assertEquals(1, helper.latestShipment?.notes?.size, "latestShipment should not be updated after stopTracking.")
     }
 }
