@@ -3,6 +3,13 @@ package org.example.project
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class UnitTests {
 
@@ -159,5 +166,31 @@ class UnitTests {
 
         assertTrue(observer.updateCalled, "Observer should be notified when an update is applied.")
         assertEquals(shipment, observer.updatedShipment)
+    }
+
+    // --- Tracking Simulator Test ---
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun testFullSimulation() = runTest {
+        val simulator = TrackingSimulator(this.coroutineContext[kotlin.coroutines.ContinuationInterceptor] as kotlinx.coroutines.CoroutineDispatcher)
+        simulator.start()
+
+        advanceTimeBy(81000)
+
+        // Check final state of s10000 (lost)
+        val shipment1 = simulator.shipments["s10000"]
+        assertNotNull(shipment1)
+        assertEquals("lost", shipment1.status)
+
+        // Check final state of s10003 (canceled)
+        val shipment2 = simulator.shipments["s10003"]
+        assertNotNull(shipment2)
+        assertEquals("canceled", shipment2.status)
+
+        // Check final state of s10006 (delivered)
+        val shipment3 = simulator.shipments["s10006"]
+        assertNotNull(shipment3)
+        assertEquals("delivered", shipment3.status)
     }
 }
