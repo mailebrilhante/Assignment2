@@ -1,9 +1,9 @@
 package org.example.project
 
-class Shipment (private var _id: String): Subject {
+class Shipment(private val _id: String) : Subject {
 
     val id: String
-    get() = _id
+        get() = _id
 
     var status: String = "created"
     var location: String = "unknown"
@@ -29,7 +29,7 @@ class Shipment (private var _id: String): Subject {
         notifyObservers()
     }
 
-    fun addUpdate(update: String){
+    fun addUpdate(update: String) {
         updates.add(update)
         notifyObservers()
     }
@@ -39,5 +39,13 @@ class Shipment (private var _id: String): Subject {
         notifyObservers()
     }
 
-    
+    fun copy(): Shipment {
+        val newShipment = Shipment(id)
+        newShipment.status = this.status
+        newShipment.location = this.location
+        newShipment.expectedDelivery = this.expectedDelivery
+        newShipment.notes = this.notes.toMutableList()
+        newShipment.updates = this.updates.toMutableList()
+        return newShipment
+    }
 }
