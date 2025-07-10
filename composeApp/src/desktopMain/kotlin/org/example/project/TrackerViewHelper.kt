@@ -20,5 +20,5 @@ class TrackerViewHelper(private val shipment: Shipment) : Observer {
     override fun update(updatedShipment: Shipment) {
         latestShipment = updatedShipment.copy()
         println("Tracker for ${shipment.id} received an update.")
-    }
+    } 
 } 
