@@ -1,24 +1,36 @@
 package org.example.project
 
-class TrackerViewHelper(private val shipment: Shipment) : Observer {
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.State
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 
-    val shipmentId: String
-        get() = shipment.id
+class TrackerViewHelper(private val simulator: TrackingSimulator) : Observer {
+    private val _trackedShipments = mutableStateMapOf<String, Shipment>()
+    val trackedShipments: SnapshotStateMap<String, Shipment> = _trackedShipments
 
-    var latestShipment: Shipment? = null
-        private set
+    fun trackShipment(id: String) {
+        if (_trackedShipments.containsKey(id)) return
 
-    fun startTracking() {
-        shipment.registerObserver(this)
-        latestShipment = shipment.copy()
+        val shipment = simulator.shipments[id]
+        shipment?.let {
+            it.registerObserver(this)
+            _trackedShipments[id] = it.copy()
+        }
     }
 
-    fun stopTracking() {
-        shipment.removeObserver(this)
+    fun stopTrackingShipment(id: String) {
+        simulator.shipments[id]?.removeObserver(this)
+        _trackedShipments.remove(id)
     }
 
-    override fun update(updatedShipment: Shipment) {
-        latestShipment = updatedShipment.copy()
-        println("Tracker for ${shipment.id} received an update.")
-    } 
+    fun getShipment(id: String): Shipment? {
+        return simulator.shipments[id]
+    }
+
+    override fun update(shipment: Shipment) {
+        if (_trackedShipments.containsKey(shipment.id)) {
+            _trackedShipments[shipment.id] = shipment.copy()
+            println("UI_HELPER: Received update for ${shipment.id}, UI state changed.")
+        }
+    }
 } 

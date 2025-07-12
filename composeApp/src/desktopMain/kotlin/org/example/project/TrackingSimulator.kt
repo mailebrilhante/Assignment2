@@ -7,7 +7,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class TrackingSimulator(private val dispatcher: CoroutineDispatcher = Dispatchers.Default) {
-    val shipments = mutableMapOf<String, Shipment>()
+    private val _shipments = mutableMapOf<String, Shipment>()
+    val shipments: Map<String, Shipment>
+        get() = _shipments.toMap()
+
     private val scope = CoroutineScope(dispatcher)
 
     fun start() {
@@ -18,33 +21,35 @@ class TrackingSimulator(private val dispatcher: CoroutineDispatcher = Dispatcher
                 return@launch
             }
             inputStream.bufferedReader().readLines().forEach { line ->
-                processUpdate(line)
+                sendUpdate(line)
                 delay(1000)
             }
         }
     }
 
-    private fun processUpdate(line: String) {
+    fun sendUpdate(line: String) {
         val parts = line.split(",", limit = 4)
         val type = parts[0]
         val id = parts[1]
         val timestamp = parts[2].toLong()
         val otherInfo = parts.getOrNull(3)
 
-        val shipment = shipments.getOrPut(id) { Shipment(id) }
+        val shipment = _shipments.getOrPut(id) { Shipment(id) }
 
         val updateAction: (Shipment, Long, String?) -> Unit = when (type) {
-            "created" -> { s, _, _ -> s.status = "created" }
-            "shipped" -> { s, ts, info ->
-                s.status = "shipped"
-                info?.let { s.location = it }
-                s.expectedDelivery = ts
+            "created" -> { s, _, _ -> s.setStatus("created") }
+            "shipped" -> { s, _, info ->
+                s.setStatus("shipped")
+                info?.toLongOrNull()?.let { s.setExpectedDelivery(it) }
             }
-            "location" -> { s, _, info -> info?.let { s.location = it } }
-            "delivered" -> { s, _, _ -> s.status = "delivered" }
-            "delayed" -> { s, _, _ -> s.status = "delayed" }
-            "lost" -> { s, _, _ -> s.status = "lost" }
-            "canceled" -> { s, _, _ -> s.status = "canceled" }
+            "location" -> { s, _, info -> info?.let { s.setLocation(it) } }
+            "delivered" -> { s, _, _ -> s.setStatus("delivered") }
+            "delayed" -> { s, _, info ->
+                s.setStatus("delayed")
+                info?.toLongOrNull()?.let { s.setExpectedDelivery(it) }
+            }
+            "lost" -> { s, _, _ -> s.setStatus("lost") }
+            "canceled" -> { s, _, _ -> s.setStatus("canceled") }
             "noteadded" -> { s, _, info -> info?.let { s.addNote(it) } }
             else -> { _, _, _ -> /* Do nothing for unknown types */ }
         }
